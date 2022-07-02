@@ -1,60 +1,95 @@
 
+using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace HelloWorld
 {
    public class HelloWorldManager : MonoBehaviour
    {
-      void OnGUI()
+
+      [SerializeField]
+      private Button startServerButton;
+
+      [SerializeField]
+      private Button startHostButton;
+
+      [SerializeField]
+      private Button startClientButton;
+
+      [SerializeField]
+      private Button Move;
+
+      [SerializeField]
+      private TextMeshProUGUI playersInGameText;
+
+      private void Awake()
       {
-         GUILayout.BeginArea(new Rect(10, 10, 300, 300));
-         if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-         {
-            StartButtons();
-         }
-         else
-         {
-            StatusLabels();
-
-            SubmitNewPosition();
-         }
-
-         GUILayout.EndArea();
+         Cursor.visible = true;
       }
 
-      static void StartButtons()
+      private void Update()
       {
-         if (GUILayout.Button("Host")) NetworkManager.Singleton.StartHost();
-         if (GUILayout.Button("Client")) NetworkManager.Singleton.StartClient();
-         if (GUILayout.Button("Server")) NetworkManager.Singleton.StartServer();
+         playersInGameText.text = $"Players in game {PlayersManager.Instance.playersInGame.Value}";
       }
 
-      static void StatusLabels()
+      private void Start()
       {
-         var mode = NetworkManager.Singleton.IsHost ?
-             "Host" : NetworkManager.Singleton.IsServer ? "Server" : "Client";
-
-         GUILayout.Label("Transport: " +
-             NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
-         GUILayout.Label("Mode: " + mode);
-      }
-
-      static void SubmitNewPosition()
-      {
-         if (GUILayout.Button(NetworkManager.Singleton.IsServer ? "Move" : "Request Position Change"))
+         startServerButton.onClick.AddListener(() =>
          {
-            if (NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+            if (NetworkManager.Singleton.StartHost())
             {
-               foreach (ulong uid in NetworkManager.Singleton.ConnectedClientsIds)
-                  NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(uid).GetComponent<HelloWorldPlayer>().Move();
+               Debug.Log("Server started...");
             }
             else
             {
-               var playerObject = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
-               var player = playerObject.GetComponent<HelloWorldPlayer>();
-               player.Move();
+               Debug.Log("Server could not be started...");
             }
+
+         });
+
+         startHostButton.onClick.AddListener(() =>
+         {
+            if (NetworkManager.Singleton.StartServer())
+            {
+               Debug.Log("Host started...");
+            }
+            else
+            {
+               Debug.Log("Host could not be started...");
+            }
+         });
+
+         startClientButton.onClick.AddListener(() =>
+         {
+            if (NetworkManager.Singleton.StartClient())
+            {
+               Debug.Log("Client started...");
+            }
+            else
+            {
+               Debug.Log("Client could not be started...");
+            }
+         });
+
+         Move.onClick.AddListener(() =>
+         {
+            SubmitNewPosition();
+         });
+      }
+      void SubmitNewPosition()
+      {
+         if (NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+         {
+            foreach (ulong uid in NetworkManager.Singleton.ConnectedClientsIds)
+               NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(uid).GetComponent<HelloWorldPlayer>().Move();
+         }
+         else
+         {
+            var playerObject = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
+            var player = playerObject.GetComponent<HelloWorldPlayer>();
+            player.Move();
          }
       }
    }
